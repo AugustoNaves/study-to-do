@@ -1,254 +1,516 @@
-// study-to-do: tudo fica salvo no localStorage deste aparelho.
+// SHEMA · Estudos com propósito
+// Tudo fica salvo no localStorage deste aparelho.
 const VAPID_PUBLIC_KEY = "BCj7dwNnOnRW_q5Q91-ragvpS4uIi8HjDk0v1EWZtHLKcfLlLMJaPA5qO3dEt-_4lT0nH-v_5eZSl_rLJn95TR0";
-const STORE_KEY = "study-to-do:v1";
+const STORE_KEY = "shema:v1";
+const OLD_KEY = "study-to-do:v1";
+const PRIO_ORDEM = { alta: 0, media: 1, baixa: 2 };
+const PRIO_NOME = { alta: "prioridade alta", media: "prioridade média", baixa: "prioridade baixa" };
 
-// ---------- Estado ----------
-function emptyState() {
-  return { done: {}, days: {}, posts: 0 };
-}
-function load() {
-  try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return emptyState();
-    return { ...emptyState(), ...JSON.parse(raw) };
-  } catch {
-    return emptyState();
-  }
-}
-function save() {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
-  } catch {
-    toast("Não consegui salvar neste navegador.");
-  }
-}
-let state = load();
-
-// ---------- Datas (sempre no fuso local) ----------
+// ---------- Datas (fuso local) ----------
 function dayKey(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function fromKey(k) {
+  const [y, m, d] = k.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 function addDays(d, n) {
   const c = new Date(d);
   c.setDate(c.getDate() + n);
   return c;
 }
-
-function studiedOn(key) {
-  return Boolean(state.days[key]);
+function startOfWeek(d) {
+  // Semana começa na segunda-feira.
+  const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return addDays(c, -((c.getDay() + 6) % 7));
 }
-function markToday(note) {
-  const key = dayKey();
-  const entry = state.days[key] || { count: 0, notes: [] };
-  entry.count += 1;
-  if (note) entry.notes.push(note);
-  state.days[key] = entry;
+function dayOfYear(d = new Date()) {
+  return Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
+}
+const fmtCurto = (k) => fromKey(k).toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "");
+
+// ---------- Estado ----------
+let contador = Date.now();
+const uid = () => (contador++).toString(36) + Math.random().toString(36).slice(2, 6);
+
+function emptyState() {
+  return { nome: "", tarefas: [], devoc: {}, diasLegado: [], push: false };
 }
 
-// Sequência: conta para trás a partir de hoje (ou de ontem, se hoje ainda não estudou).
-function streak() {
-  let d = new Date();
-  if (!studiedOn(dayKey(d))) d = addDays(d, -1);
-  let n = 0;
-  while (studiedOn(dayKey(d))) {
-    n++;
-    d = addDays(d, -1);
+function seedTarefas(doneMap = {}) {
+  let ordem = 0;
+  return TRILHA.flatMap((fase) =>
+    fase.tarefas.map(([id, titulo]) => ({
+      id: uid(),
+      titulo,
+      descricao: `${fase.titulo} · ${fase.semanas}`,
+      materia: fase.id === "fp" ? "Open source" : "Trilha back-end",
+      data: null,
+      prioridade: "media",
+      concluida: Boolean(doneMap[id]),
+      concluidaEm: doneMap[id] || null,
+      ordem: ordem++,
+    }))
+  );
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return { ...emptyState(), ...JSON.parse(raw) };
+    // Primeira vez: migra o progresso do app antigo, se houver.
+    const s = emptyState();
+    const old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
+    s.tarefas = seedTarefas(old?.done || {});
+    s.diasLegado = old?.days ? Object.keys(old.days) : [];
+    return s;
+  } catch {
+    const s = emptyState();
+    s.tarefas = seedTarefas();
+    return s;
   }
-  return n;
+}
+function save() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch {
+    toast("Não consegui salvar neste aparelho.");
+  }
+}
+let state = load();
+save();
+
+// ---------- Consultas ----------
+const hoje = () => dayKey();
+function ordenar(a, b) {
+  return (
+    PRIO_ORDEM[a.prioridade] - PRIO_ORDEM[b.prioridade] ||
+    (a.data || "9999").localeCompare(b.data || "9999") ||
+    (a.ordem ?? 1e9) - (b.ordem ?? 1e9)
+  );
+}
+function diasDeEstudo() {
+  const set = new Set(state.diasLegado);
+  state.tarefas.forEach((t) => t.concluidaEm && set.add(t.concluidaEm));
+  return set;
+}
+const devInfo = (id) => state.devoc[id] || { notas: "", oracao: "", concluidos: [] };
+const devFeitoHoje = (id) => devInfo(id).concluidos.includes(hoje());
+const devsDe = (momento) => DEVOCIONAIS.filter((d) => d.momento === momento);
+function devDoDia(momento) {
+  const lista = devsDe(momento);
+  return lista[dayOfYear() % lista.length];
 }
 
-// ---------- Utilidades ----------
+// ---------- Utilidades de interface ----------
 const $ = (id) => document.getElementById(id);
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "html") el.innerHTML = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  kids.flat().forEach((c) => c != null && el.append(c));
+  return el;
+}
+const svg = (path, cls = "") => h("span", { html: `<svg class="ico ${cls}" viewBox="0 0 24 24">${path}</svg>`, "aria-hidden": "true", style: "display:contents" });
 let toastTimer;
 function toast(msg) {
   const t = $("toast");
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
-}
-const allTasks = () => TRILHA.flatMap((f) => f.tarefas.map(([id, texto]) => ({ id, texto, fase: f })));
-
-// ---------- Render: Hoje ----------
-function renderToday() {
-  const s = streak();
-  $("streak-num").textContent = s;
-  const today = state.days[dayKey()];
-  const btn = $("btn-today");
-  if (today) {
-    $("today-status").textContent = "Coisinha de hoje feita. Pode fazer mais, se quiser.";
-    btn.textContent = "Fiz mais uma";
-  } else {
-    $("today-status").textContent = s > 0
-      ? "Ainda falta a coisinha de hoje para manter a sequência."
-      : "Comece hoje. Uma coisinha já conta.";
-    btn.textContent = "Fiz minha coisinha hoje";
-  }
-
-  const next = allTasks().find((t) => !state.done[t.id]);
-  const box = $("next-task");
-  box.innerHTML = "";
-  if (!next) {
-    box.innerHTML = '<p class="next-title">Trilha completa!</p><p class="muted small">Hora de escolher o próximo projeto.</p>';
-  } else {
-    const title = document.createElement("p");
-    title.className = "next-title";
-    title.textContent = next.texto;
-    const phase = document.createElement("p");
-    phase.className = "next-phase muted small";
-    phase.textContent = `${next.fase.titulo} · ${next.fase.semanas}`;
-    const b = document.createElement("button");
-    b.className = "btn primary";
-    b.textContent = "Concluí esta";
-    b.onclick = () => toggleTask(next.id, true);
-    box.append(title, phase, b);
-  }
-
-  renderHeatmap();
-  $("posts-num").textContent = state.posts;
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
 }
 
-function renderHeatmap() {
-  const weeks = 12;
-  const today = new Date();
-  // Termina no sábado desta semana; começa no domingo de 12 semanas atrás.
-  const end = addDays(today, 6 - today.getDay());
-  const start = addDays(end, -(weeks * 7) + 1);
-  const hm = $("heatmap");
-  hm.innerHTML = "";
-  let studied = 0;
-  for (let i = 0; i < weeks * 7; i++) {
-    const d = addDays(start, i);
-    const key = dayKey(d);
-    const cell = document.createElement("span");
-    const entry = state.days[key];
-    if (d > today) cell.className = "future";
-    else if (entry) {
-      studied++;
-      cell.className = entry.count >= 3 ? "l3" : entry.count === 2 ? "l2" : "l1";
-    }
-    if (key === dayKey(today)) cell.classList.add("today");
-    cell.title = entry ? `${key}: ${entry.count} coisinha(s)` : key;
-    hm.append(cell);
+// ---------- Componentes ----------
+function taskRow(t) {
+  const meta = [];
+  if (t.materia) meta.push(h("b", {}, t.materia));
+  if (t.data) {
+    const k = t.data;
+    const txt = k === hoje() ? "hoje" : k < hoje() && !t.concluida ? `desde ${fmtCurto(k)}` : fmtCurto(k);
+    meta.push(` · ${txt}`);
   }
-  const total = Object.keys(state.days).length;
-  $("stats").textContent = `${studied} dias estudados no período · ${total} no total`;
-}
-
-// ---------- Render: Trilha ----------
-let openPhases = new Set();
-function renderTrilha() {
-  const tasks = allTasks();
-  const doneCount = tasks.filter((t) => state.done[t.id]).length;
-  const pct = Math.round((doneCount / tasks.length) * 100);
-  $("overall-pct").textContent = `${pct}%`;
-  $("overall-bar").style.width = `${pct}%`;
-
-  const wrap = $("phases");
-  wrap.innerHTML = "";
-  const firstOpen = TRILHA.find((f) => f.tarefas.some(([id]) => !state.done[id]));
-  TRILHA.forEach((f) => {
-    const done = f.tarefas.filter(([id]) => state.done[id]).length;
-    const det = document.createElement("details");
-    det.className = "phase" + (done === f.tarefas.length ? " done" : "");
-    det.open = openPhases.size ? openPhases.has(f.id) : f === firstOpen;
-    det.addEventListener("toggle", () => {
-      det.open ? openPhases.add(f.id) : openPhases.delete(f.id);
-    });
-
-    const sum = document.createElement("summary");
-    sum.innerHTML = `
-      <div class="phase-info">
-        <div class="phase-title"></div>
-        <div class="muted small"></div>
-        <div class="bar"><div class="bar-fill" style="width:${(done / f.tarefas.length) * 100}%"></div></div>
-      </div>
-      <span class="phase-count">${done}/${f.tarefas.length}</span>`;
-    sum.querySelector(".phase-title").textContent = f.titulo;
-    sum.querySelector(".muted").textContent = f.semanas;
-
-    const ul = document.createElement("ul");
-    ul.className = "tasks";
-    f.tarefas.forEach(([id, texto]) => {
-      const li = document.createElement("li");
-      const label = document.createElement("label");
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = Boolean(state.done[id]);
-      cb.onchange = () => toggleTask(id, cb.checked);
-      const span = document.createElement("span");
-      span.textContent = texto;
-      if (cb.checked) span.className = "done-text";
-      label.append(cb, span);
-      li.append(label);
-      ul.append(li);
-    });
-
-    det.append(sum, ul);
-    wrap.append(det);
+  meta.push(` · ${PRIO_NOME[t.prioridade]}`);
+  const cb = h("input", {
+    type: "checkbox",
+    class: "check",
+    "aria-label": `Concluir: ${t.titulo}`,
+    onchange: () => toggleTarefa(t.id),
   });
-  if (!openPhases.size && firstOpen) openPhases.add(firstOpen.id);
+  cb.checked = t.concluida;
+  return h(
+    "li",
+    { class: "task" + (t.concluida ? " done" : "") },
+    cb,
+    h(
+      "button",
+      { class: "task-body", type: "button", onclick: () => abrirTarefa(t) },
+      h("span", { class: "task-title" }, t.titulo),
+      h("span", { class: "meta" }, h("span", { class: "prio " + t.prioridade }), ...meta)
+    )
+  );
 }
 
-function toggleTask(id, checked) {
-  if (checked) {
-    state.done[id] = dayKey();
-    markToday();
-    toast("Boa! Coisinha registrada.");
-  } else {
-    delete state.done[id];
+function emptyBox(titulo, texto, acao) {
+  return h("div", { class: "empty" }, h("strong", {}, titulo), h("span", {}, texto), acao ? h("div", { class: "row", style: "justify-content:center" }, acao) : null);
+}
+
+// ---------- INÍCIO ----------
+function renderInicio() {
+  const agora = new Date();
+  const hr = agora.getHours();
+  const saud = hr < 12 ? "Bom dia" : hr < 18 ? "Boa tarde" : "Boa noite";
+  $("greet").textContent = state.nome ? `${saud}, ${state.nome}` : saud;
+  $("today-date").textContent = agora.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+
+  const v = VERSICULOS[(agora.getDate() - 1) % VERSICULOS.length];
+  $("verse-text").textContent = `“${v.texto}”`;
+  $("verse-ref").textContent = v.referencia;
+
+  // Jornada
+  const k = hoje();
+  const antes = devDoDia("antes");
+  const depois = devDoDia("depois");
+  const p1 = devsDe("antes").some((d) => devFeitoHoje(d.id));
+  const p2 = state.tarefas.some((t) => t.concluidaEm === k);
+  const p3 = devsDe("depois").some((d) => devFeitoHoje(d.id));
+  const nTarefasHoje = state.tarefas.filter((t) => !t.concluida && t.data && t.data <= k).length;
+  const passos = [
+    { n: 1, t: "Preparar o coração", s: antes.titulo, done: p1, go: () => abrirDevocional(antes.id) },
+    { n: 2, t: "Estudar com propósito", s: nTarefasHoje ? `${nTarefasHoje} tarefa(s) para hoje` : "Sua lista de estudos", done: p2, go: () => irPara("estudos") },
+    { n: 3, t: "Refletir e agradecer", s: depois.titulo, done: p3, go: () => abrirDevocional(depois.id) },
+  ];
+  const feitos = passos.filter((p) => p.done).length;
+  $("j-hint").textContent = [
+    "Um passo de cada vez. Nenhum é obrigatório.",
+    "Que bom que você começou.",
+    "Você já caminhou bastante hoje.",
+    "Dia completo. Obrigado por cuidar disso.",
+  ][feitos];
+  $("journey").replaceChildren(
+    ...passos.map((p) =>
+      h(
+        "li",
+        {},
+        h(
+          "button",
+          { class: "step" + (p.done ? " done" : ""), type: "button", onclick: p.go, "aria-label": `${p.t}${p.done ? " (feito)" : ""}` },
+          h("span", { class: "mark", "aria-hidden": "true" }, p.done ? "✓" : String(p.n)),
+          h("span", {}, h("span", { class: "t" }, p.t), h("span", { class: "s" }, p.s)),
+          svg('<path d="m9 6 6 6-6 6"/>', "go")
+        )
+      )
+    )
+  );
+
+  // Para hoje
+  const pend = state.tarefas.filter((t) => !t.concluida);
+  let lista = pend.filter((t) => t.data && t.data <= k).sort(ordenar);
+  let sugestao = false;
+  if (!lista.length) {
+    lista = pend.filter((t) => !t.data).sort(ordenar).slice(0, 3);
+    sugestao = lista.length > 0;
   }
-  save();
-  renderAll();
+  lista = lista.slice(0, 5);
+  const feitasHoje = state.tarefas.filter((t) => t.concluidaEm === k);
+  const total = lista.length + feitasHoje.length;
+  const ul = $("home-tasks");
+  if (!total) {
+    $("h-prog").textContent = "";
+    $("h-bar-wrap").hidden = true;
+    ul.replaceChildren(
+      h("li", {}, emptyBox("Nada marcado para hoje.", "Crie uma tarefa quando quiser.", h("button", { class: "btn ghost", onclick: () => abrirTarefa() }, "Nova tarefa")))
+    );
+  } else {
+    $("h-bar-wrap").hidden = false;
+    $("h-prog").textContent = !lista.length
+      ? "Tudo feito por hoje. Descanse bem."
+      : sugestao && !feitasHoje.length
+      ? "Nenhuma tarefa com data para hoje. Sugestões da sua lista:"
+      : `${feitasHoje.length} de ${total} concluídas`;
+    $("h-bar").style.width = `${(feitasHoje.length / total) * 100}%`;
+    ul.replaceChildren(...lista.map(taskRow), ...feitasHoje.map(taskRow));
+  }
+
+  // Próximos estudos
+  const prox = pend.filter((t) => t.data && t.data > k).sort((a, b) => a.data.localeCompare(b.data)).slice(0, 3);
+  $("upcoming-wrap").hidden = !prox.length;
+  $("upcoming").replaceChildren(
+    ...prox.map((t) => {
+      const d = fromKey(t.data);
+      return h(
+        "li",
+        {},
+        h("span", { class: "day" }, String(d.getDate()), h("small", {}, d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""))),
+        h("button", { class: "task-body", type: "button", onclick: () => abrirTarefa(t) }, h("span", { class: "task-title" }, t.titulo), h("span", { class: "meta" }, h("b", {}, t.materia || "Sem matéria")))
+      );
+    })
+  );
 }
 
-function renderAll() {
-  renderToday();
-  renderTrilha();
+// ---------- ESTUDOS ----------
+let filtro = "pendentes";
+function renderEstudos() {
+  const pend = state.tarefas.filter((t) => !t.concluida);
+  const done = state.tarefas.filter((t) => t.concluida);
+  $("count-pend").textContent = `(${pend.length})`;
+  $("count-done").textContent = `(${done.length})`;
+  document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.filter === filtro)));
+
+  const wrap = $("task-groups");
+  if (filtro === "concluidas") {
+    if (!done.length) return wrap.replaceChildren(emptyBox("Ainda nada por aqui.", "As tarefas concluídas aparecem nesta lista."));
+    const lista = [...done].sort((a, b) => (b.concluidaEm || "").localeCompare(a.concluidaEm || ""));
+    return wrap.replaceChildren(h("ul", { class: "tasks" }, lista.map(taskRow)));
+  }
+  if (!pend.length) {
+    return wrap.replaceChildren(emptyBox("Nenhuma tarefa pendente.", "Toque em “Nova tarefa” para organizar seus estudos."));
+  }
+  const grupos = new Map();
+  pend.sort(ordenar).forEach((t) => {
+    const g = t.materia || "Sem matéria";
+    if (!grupos.has(g)) grupos.set(g, []);
+    grupos.get(g).push(t);
+  });
+  const nomes = [...grupos.keys()].sort((a, b) => (a === "Sem matéria") - (b === "Sem matéria") || a.localeCompare(b, "pt-BR"));
+  wrap.replaceChildren(...nomes.flatMap((g) => [h("h3", { class: "group-title" }, `${g} · ${grupos.get(g).length}`), h("ul", { class: "tasks" }, grupos.get(g).map(taskRow))]));
 }
 
-// ---------- Ações ----------
-$("btn-today").onclick = () => {
-  const note = $("today-note").value.trim();
-  markToday(note);
-  $("today-note").value = "";
+function toggleTarefa(id) {
+  const t = state.tarefas.find((x) => x.id === id);
+  if (!t) return;
+  t.concluida = !t.concluida;
+  t.concluidaEm = t.concluida ? hoje() : null;
   save();
   renderAll();
-  toast(`Sequência: ${streak()} dia(s). Continue assim!`);
-};
-$("posts-plus").onclick = () => { state.posts++; markToday(); save(); renderAll(); };
-$("posts-minus").onclick = () => { state.posts = Math.max(0, state.posts - 1); save(); renderAll(); };
+  if (t.concluida) toast("Tarefa concluída.");
+}
 
-// Abas
-document.querySelectorAll(".nav-btn").forEach((b) => {
-  b.onclick = () => {
-    document.querySelectorAll(".nav-btn").forEach((x) => {
-      x.classList.toggle("active", x === b);
-      x.toggleAttribute("aria-current", x === b);
-    });
-    document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== `tab-${b.dataset.tab}`));
-    window.scrollTo(0, 0);
+// Formulário de tarefa
+let editando = null;
+function abrirTarefa(t = null) {
+  editando = t;
+  $("ts-title").textContent = t ? "Editar tarefa" : "Nova tarefa";
+  $("tf-titulo").value = t?.titulo || "";
+  $("tf-desc").value = t?.descricao || "";
+  $("tf-materia").value = t?.materia || "";
+  $("tf-data").value = t?.data || "";
+  document.querySelector(`input[name="prio"][value="${t?.prioridade || "media"}"]`).checked = true;
+  $("tf-delete").hidden = !t;
+  $("tf-err").hidden = true;
+  const materias = [...new Set(state.tarefas.map((x) => x.materia).filter(Boolean))].sort();
+  $("materias").replaceChildren(...materias.map((m) => h("option", { value: m })));
+  abrirOverlay($("task-sheet"));
+  if (!t) setTimeout(() => $("tf-titulo").focus(), 250);
+}
+$("task-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const titulo = $("tf-titulo").value.trim();
+  if (!titulo) {
+    $("tf-err").hidden = false;
+    $("tf-titulo").focus();
+    return;
+  }
+  const dados = {
+    titulo,
+    descricao: $("tf-desc").value.trim(),
+    materia: $("tf-materia").value.trim(),
+    data: $("tf-data").value || null,
+    prioridade: document.querySelector('input[name="prio"]:checked').value,
   };
+  if (editando) Object.assign(editando, dados);
+  else state.tarefas.push({ id: uid(), ...dados, concluida: false, concluidaEm: null });
+  save();
+  fecharOverlay();
+  renderAll();
+  toast(editando ? "Tarefa atualizada." : "Tarefa criada.");
+});
+$("tf-cancel").onclick = () => fecharOverlay();
+$("tf-delete").onclick = () => {
+  if (!editando || !confirm(`Excluir “${editando.titulo}”? Isso não pode ser desfeito.`)) return;
+  state.tarefas = state.tarefas.filter((t) => t !== editando);
+  save();
+  fecharOverlay();
+  renderAll();
+  toast("Tarefa excluída.");
+};
+$("tf-titulo").addEventListener("input", () => ($("tf-err").hidden = true));
+$("task-sheet").addEventListener("click", (e) => e.target === e.currentTarget && fecharOverlay());
+$("new-task").onclick = () => abrirTarefa();
+document.querySelectorAll(".seg button").forEach((b) => (b.onclick = () => { filtro = b.dataset.filter; renderEstudos(); }));
+
+// ---------- DEVOCIONAIS ----------
+function renderDevocionais() {
+  ["antes", "depois"].forEach((m) => {
+    const sugerido = devDoDia(m).id;
+    $(`list-${m}`).replaceChildren(
+      ...devsDe(m).map((d, i) => {
+        const info = devInfo(d.id);
+        const feito = info.concluidos.length > 0;
+        return h(
+          "li",
+          {},
+          h(
+            "button",
+            { class: "dev-item" + (d.id === sugerido ? " today" : ""), type: "button", onclick: () => abrirDevocional(d.id), "aria-label": `${d.titulo}, ${d.referencia}${d.id === sugerido ? ", sugerido para hoje" : ""}${feito ? ", já realizado" : ""}` },
+            h("span", { class: "n", "aria-hidden": "true" }, String(i + 1)),
+            h("span", {}, h("span", { class: "t" }, d.titulo), h("span", { class: "r" }, d.id === sugerido ? `${d.referencia} · sugerido hoje` : d.referencia)),
+            feito ? h("span", { class: "ok", "aria-hidden": "true" }, "✓ feito") : null
+          )
+        );
+      })
+    );
+  });
+}
+
+let lendo = null;
+let salvarTimer;
+function abrirDevocional(id) {
+  const d = DEVOCIONAIS.find((x) => x.id === id);
+  if (!d) return;
+  lendo = d;
+  const info = devInfo(id);
+  $("rd-moment").textContent = d.momento === "antes" ? "Antes de estudar · Preparar o coração" : "Depois de estudar · Refletir e agradecer";
+  $("rd-title").textContent = d.titulo;
+  $("rd-texto").textContent = `“${d.texto}”`;
+  $("rd-ref").textContent = `${d.referencia} · Bíblia Livre`;
+  $("rd-reflexao").replaceChildren(...d.reflexao.split(/\n\n+/).map((p) => h("p", {}, p)));
+  $("rd-aplicacao").textContent = d.aplicacao;
+  $("rd-oracao-sug").textContent = d.oracao;
+  $("rd-notas").value = info.notas;
+  $("rd-oracao").value = info.oracao;
+  $("rd-saved").textContent = "";
+  atualizarBotaoDev();
+  abrirOverlay($("reader"));
+  $("reader").scrollTop = 0;
+}
+function atualizarBotaoDev() {
+  $("rd-done").textContent = devFeitoHoje(lendo.id) ? "✓ Concluído hoje · desfazer" : "Concluir devocional";
+  $("rd-done").className = devFeitoHoje(lendo.id) ? "btn ghost block" : "btn primary block";
+}
+function salvarDev(patch) {
+  state.devoc[lendo.id] = { ...devInfo(lendo.id), ...patch };
+  save();
+}
+["rd-notas", "rd-oracao"].forEach((id) =>
+  $(id).addEventListener("input", () => {
+    clearTimeout(salvarTimer);
+    $("rd-saved").textContent = "";
+    salvarTimer = setTimeout(() => {
+      salvarDev({ notas: $("rd-notas").value, oracao: $("rd-oracao").value });
+      $("rd-saved").textContent = "Salvo neste aparelho.";
+    }, 500);
+  })
+);
+$("rd-done").onclick = () => {
+  const info = devInfo(lendo.id);
+  const k = hoje();
+  const concluidos = info.concluidos.includes(k) ? info.concluidos.filter((x) => x !== k) : [...info.concluidos, k];
+  salvarDev({ concluidos, notas: $("rd-notas").value, oracao: $("rd-oracao").value });
+  atualizarBotaoDev();
+  renderAll();
+  if (concluidos.includes(k)) toast("Que bom ter esse tempo com Deus.");
+};
+
+// ---------- PROGRESSO ----------
+function renderProgresso() {
+  const dias = diasDeEstudo();
+  const k = hoje();
+  const ini = startOfWeek(new Date());
+  let nSemana = 0;
+  $("week").replaceChildren(
+    ...Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(ini, i);
+      const dk = dayKey(d);
+      const on = dias.has(dk);
+      if (on) nSemana++;
+      const cls = [on && "on", dk === k && "today", dk > k && "future"].filter(Boolean).join(" ");
+      return h("li", { class: cls, "aria-label": `${d.toLocaleDateString("pt-BR", { weekday: "long" })}${on ? ": estudou" : ""}` }, d.toLocaleDateString("pt-BR", { weekday: "narrow" }), h("span", { class: "dot" }));
+    })
+  );
+  $("pw-hint").textContent = nSemana
+    ? `Você estudou em ${nSemana} ${nSemana === 1 ? "dia" : "dias"} nesta semana.`
+    : "Uma semana nova é sempre um bom começo.";
+
+  $("st-tasks").textContent = state.tarefas.filter((t) => t.concluida).length;
+  $("st-days").textContent = dias.size;
+  $("st-devs").textContent = Object.values(state.devoc).reduce((s, d) => s + (d.concluidos?.length || 0), 0);
+
+  const linhas = [];
+  for (let w = 0; w < 8; w++) {
+    const s = addDays(ini, -7 * w);
+    let n = 0;
+    for (let i = 0; i < 7; i++) if (dias.has(dayKey(addDays(s, i)))) n++;
+    const fim = addDays(s, 6);
+    const label = w === 0 ? "Esta semana" : `${s.getDate()}–${fim.getDate()} ${fim.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "")}`;
+    linhas.push(h("li", {}, h("span", {}, label), h("span", { class: "hb" }, h("i", { style: `width:${(n / 7) * 100}%` })), h("span", { class: "hn" }, String(n))));
+  }
+  $("history").replaceChildren(...linhas);
+}
+
+// ---------- Navegação ----------
+function irPara(tab) {
+  document.querySelectorAll(".nav button").forEach((b) => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle("on", on);
+    on ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current");
+  });
+  document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== `tab-${tab}`));
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll(".nav button").forEach((b) => (b.onclick = () => irPara(b.dataset.tab)));
+document.querySelectorAll("[data-goto]").forEach((b) => (b.onclick = () => irPara(b.dataset.goto)));
+
+// Telas sobrepostas: o botão Voltar do Android fecha a de cima.
+const pilha = [];
+function abrirOverlay(el) {
+  el.hidden = false;
+  pilha.push(el);
+  document.body.classList.add("locked");
+  history.pushState({ overlay: el.id }, "");
+}
+function esconderTopo() {
+  const el = pilha.pop();
+  if (el) el.hidden = true;
+  if (!pilha.length) document.body.classList.remove("locked");
+}
+function fecharOverlay() {
+  if (pilha.length) history.back();
+}
+window.addEventListener("popstate", esconderTopo);
+document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = fecharOverlay));
+document.addEventListener("keydown", (e) => e.key === "Escape" && fecharOverlay());
+
+// ---------- Ajustes ----------
+$("open-ajustes").onclick = () => {
+  $("aj-nome").value = state.nome;
+  abrirOverlay($("ajustes"));
+  refreshPushStatus();
+};
+$("aj-nome").addEventListener("change", () => {
+  state.nome = $("aj-nome").value.trim();
+  save();
+  renderInicio();
+  toast("Nome atualizado.");
 });
 
-// Backup
 $("btn-export").onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `study-to-do-backup-${dayKey()}.json`;
+  const a = h("a", { href: URL.createObjectURL(blob), download: `shema-backup-${hoje()}.json` });
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
 $("file-import").onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (typeof data !== "object" || !data.done || !data.days) throw new Error();
+    if (!Array.isArray(data.tarefas) || typeof data.devoc !== "object") throw new Error();
     state = { ...emptyState(), ...data };
     save();
     renderAll();
@@ -262,22 +524,17 @@ $("file-import").onchange = async (e) => {
 // ---------- Service worker e lembrete ----------
 let swReg = null;
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js").then((reg) => {
-    swReg = reg;
-    refreshPushStatus();
-  }).catch(() => {});
+  navigator.serviceWorker.register("sw.js").then((reg) => (swReg = reg)).catch(() => {});
 }
-
 function urlB64ToUint8Array(b64) {
   const pad = "=".repeat((4 - (b64.length % 4)) % 4);
   const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
-
 async function refreshPushStatus() {
   const status = $("push-status");
   if (!("PushManager" in window) || !swReg) {
-    status.textContent = "Este navegador não suporta notificações push. Use o Chrome no Android.";
+    status.textContent = "Este navegador não suporta notificações. Use o Chrome no Android.";
     $("btn-push").disabled = true;
     return;
   }
@@ -285,49 +542,33 @@ async function refreshPushStatus() {
   if (sub) {
     status.textContent = "Lembrete ativado neste aparelho.";
     $("btn-push").textContent = "Mostrar código";
-    showSub(sub);
+    $("sub-json").value = JSON.stringify(sub);
+    $("sub-box").hidden = false;
   } else if (Notification.permission === "denied") {
     status.textContent = "Notificações bloqueadas. Libere nas configurações do app.";
   } else {
     status.textContent = "Lembrete ainda não ativado.";
   }
 }
-
-function showSub(sub) {
-  $("sub-json").value = JSON.stringify(sub);
-  $("sub-box").hidden = false;
-}
-
 $("btn-push").onclick = async () => {
   if (!swReg) return;
   try {
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") return toast("Sem permissão para notificar.");
-    let sub = await swReg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await swReg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-    }
-    showSub(sub);
+    if ((await Notification.requestPermission()) !== "granted") return toast("Sem permissão para notificar.");
+    const sub =
+      (await swReg.pushManager.getSubscription()) ||
+      (await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY) }));
+    $("sub-json").value = JSON.stringify(sub);
+    $("sub-box").hidden = false;
     refreshPushStatus();
   } catch (err) {
     toast("Não consegui ativar: " + err.message);
   }
 };
-
 $("btn-test").onclick = async () => {
-  if (!swReg) return toast("Service worker ainda carregando.");
-  const perm = await Notification.requestPermission();
-  if (perm !== "granted") return toast("Sem permissão para notificar.");
-  swReg.showNotification("study-to-do", {
-    body: "Teste: é assim que o lembrete das 19h vai aparecer.",
-    icon: "icons/icon-192.png",
-    badge: "icons/badge-96.png",
-  });
+  if (!swReg) return toast("Ainda carregando. Tente de novo.");
+  if ((await Notification.requestPermission()) !== "granted") return toast("Sem permissão para notificar.");
+  swReg.showNotification("SHEMA", { body: "Assim o convite das 19h vai aparecer.", icon: "icons/icon-192.png", badge: "icons/badge-96.png" });
 };
-
 $("btn-copy").onclick = async () => {
   try {
     await navigator.clipboard.writeText($("sub-json").value);
@@ -338,8 +579,33 @@ $("btn-copy").onclick = async () => {
   }
 };
 $("btn-share").onclick = () => {
-  if (navigator.share) navigator.share({ title: "study-to-do", text: $("sub-json").value }).catch(() => {});
+  if (navigator.share) navigator.share({ title: "SHEMA", text: $("sub-json").value }).catch(() => {});
   else toast("Compartilhar não está disponível aqui.");
 };
 
+// ---------- Boas-vindas ----------
+$("welcome-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const nome = $("wl-nome").value.trim();
+  if (!nome) return $("wl-nome").focus();
+  state.nome = nome;
+  save();
+  $("welcome").hidden = true;
+  document.body.classList.remove("locked");
+  renderAll();
+});
+
+// ---------- Início ----------
+function renderAll() {
+  renderInicio();
+  renderEstudos();
+  renderDevocionais();
+  renderProgresso();
+}
 renderAll();
+if (!state.nome) {
+  $("welcome").hidden = false;
+  document.body.classList.add("locked");
+}
+// Atualiza ao voltar para o app num outro dia.
+document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && renderAll());

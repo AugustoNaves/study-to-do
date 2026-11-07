@@ -1,10 +1,11 @@
 // Service worker: deixa o app funcionar offline e mostra o lembrete diário.
-const CACHE = "study-to-do-v1";
+const CACHE = "shema-v2";
 const FILES = [
   "./",
   "index.html",
   "style.css",
   "trilha.js",
+  "devocionais.js",
   "app.js",
   "manifest.webmanifest",
   "icons/icon-192.png",
@@ -46,8 +47,8 @@ self.addEventListener("push", (e) => {
     data = { body: e.data ? e.data.text() : "" };
   }
   e.waitUntil(
-    self.registration.showNotification(data.title || "study-to-do", {
-      body: data.body || "Hora da sua coisinha de estudo de hoje.",
+    self.registration.showNotification(data.title || "SHEMA", {
+      body: data.body || "Um convite para estudar com propósito hoje.",
       icon: "icons/icon-192.png",
       badge: "icons/badge-96.png",
       tag: "lembrete-diario",

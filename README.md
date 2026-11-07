@@ -1,11 +1,15 @@
-# study-to-do
+# SHEMA · Estudos com propósito
 
-App (PWA) para manter uma trilha de estudos andando: **pelo menos uma coisinha por dia**.
+PWA para organizar estudos e cultivar a fé: estudar com sabedoria, crescer em conhecimento e fortalecer a fé.
 
-- Trilha de 12 semanas para construir um sistema de inscrição e check-in (Node + TypeScript)
-- Contagem de dias seguidos e mapa dos dias estudados
+- **Início:** versículo do dia, jornada de hoje (preparar o coração, estudar, refletir), tarefas do dia e próximos estudos
+- **Estudos:** tarefas com matéria, data e prioridade (já vem com a trilha de back-end de 12 semanas)
+- **Devocionais:** 14 devocionais (7 para antes e 7 para depois de estudar) com anotações e oração
+- **Progresso:** semana, totais e histórico, sem cobrança por dias parados
 - Lembrete diário às 19h (horário de Brasília) via notificação push
-- Funciona offline; o progresso fica salvo só no aparelho (com exportar/importar backup)
+- Funciona offline; tudo fica salvo só no aparelho (com exportar/importar backup)
+
+Textos bíblicos: Bíblia Livre (BLIVRE), © 2018 Diego Santos, Mario Sérgio e Marco Teles, licença CC BY 4.0.
 
 ## Instalar no Android
 

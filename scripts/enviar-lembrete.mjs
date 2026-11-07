@@ -13,13 +13,13 @@ if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
 }
 
 const MENSAGENS = [
-  "Uma coisinha hoje mantém a sequência viva.",
-  "Dez minutos já contam. Bora?",
-  "Qual a próxima rota da trilha? Só uma.",
-  "Quem constrói na mão aprende de verdade. Uma coisinha hoje.",
-  "Sua sequência está esperando por você.",
-  "Leia um conceito, escreva uma linha, marque no app.",
-  "Pequeno e todo dia vence grande e às vezes.",
+  "Que tal um momento de estudo hoje? Sem pressa.",
+  "Um passo de cada vez. Seus estudos te esperam.",
+  "Prepare o coração e comece com uma coisa pequena.",
+  "Estudar também é cuidar do que Deus te confiou.",
+  "Alguns minutos já contam. Bora?",
+  "Hora boa para aprender algo novo.",
+  "Seu caminho é seu. Dê o próximo passo quando puder.",
 ];
 const diaDoAno = Math.floor((Date.now() - Date.UTC(new Date().getUTCFullYear(), 0, 0)) / 86400000);
 const body = MENSAGENS[diaDoAno % MENSAGENS.length];
@@ -29,7 +29,7 @@ webpush.setVapidDetails("https://github.com/actions", VAPID_PUBLIC_KEY, VAPID_PR
 try {
   const res = await webpush.sendNotification(
     JSON.parse(PUSH_SUBSCRIPTION),
-    JSON.stringify({ title: "Hora de estudar 📚", body, url: "./" }),
+    JSON.stringify({ title: "SHEMA", body, url: "./" }),
     { TTL: 60 * 60 * 6 }
   );
   console.log("Lembrete enviado. Status:", res.statusCode);
