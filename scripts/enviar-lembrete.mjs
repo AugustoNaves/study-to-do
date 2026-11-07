@@ -29,7 +29,7 @@ webpush.setVapidDetails("https://github.com/actions", VAPID_PUBLIC_KEY, VAPID_PR
 try {
   const res = await webpush.sendNotification(
     JSON.parse(PUSH_SUBSCRIPTION),
-    JSON.stringify({ title: "SHEMA", body, url: "./" }),
+    JSON.stringify({ title: "study-to-do", body, url: "./" }),
     { TTL: 60 * 60 * 6 }
   );
   console.log("Lembrete enviado. Status:", res.statusCode);

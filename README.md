@@ -1,9 +1,9 @@
-# SHEMA · Estudos com propósito
+# study-to-do · Estudos com propósito
 
 PWA para organizar estudos e cultivar a fé: estudar com sabedoria, crescer em conhecimento e fortalecer a fé.
 
 - **Início:** versículo do dia, jornada de hoje (preparar o coração, estudar, refletir), tarefas do dia e próximos estudos
-- **Estudos:** tarefas com matéria, data e prioridade (já vem com a trilha de back-end de 12 semanas)
+- **Estudos:** tarefas com matéria, data e prioridade (já vem com as tarefas do projeto open source de inscrição e check-in, em 12 semanas)
 - **Devocionais:** 14 devocionais (7 para antes e 7 para depois de estudar) com anotações e oração
 - **Progresso:** semana, totais e histórico, sem cobrança por dias parados
 - Lembrete diário às 19h (horário de Brasília) via notificação push

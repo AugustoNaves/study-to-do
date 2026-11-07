@@ -1,6 +1,6 @@
 {
-  "name": "SHEMA · Estudos com propósito",
-  "short_name": "SHEMA",
+  "name": "study-to-do",
+  "short_name": "study-to-do",
   "description": "Organize seus estudos e cultive a fé.",
   "lang": "pt-BR",
   "start_url": "./",

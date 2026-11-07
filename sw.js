@@ -1,5 +1,5 @@
 // Service worker: deixa o app funcionar offline e mostra o lembrete diário.
-const CACHE = "shema-v2";
+const CACHE = "study-to-do-v3";
 const FILES = [
   "./",
   "index.html",
@@ -47,7 +47,7 @@ self.addEventListener("push", (e) => {
     data = { body: e.data ? e.data.text() : "" };
   }
   e.waitUntil(
-    self.registration.showNotification(data.title || "SHEMA", {
+    self.registration.showNotification(data.title || "study-to-do", {
       body: data.body || "Um convite para estudar com propósito hoje.",
       icon: "icons/icon-192.png",
       badge: "icons/badge-96.png",

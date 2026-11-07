@@ -1,4 +1,4 @@
-// SHEMA · Estudos com propósito
+// study-to-do · Estudos com propósito
 // Tudo fica salvo no localStorage deste aparelho.
 const VAPID_PUBLIC_KEY = "BCj7dwNnOnRW_q5Q91-ragvpS4uIi8HjDk0v1EWZtHLKcfLlLMJaPA5qO3dEt-_4lT0nH-v_5eZSl_rLJn95TR0";
 const STORE_KEY = "shema:v1";
@@ -37,6 +37,11 @@ function emptyState() {
   return { nome: "", tarefas: [], devoc: {}, diasLegado: [], push: false };
 }
 
+// As tarefas da trilha constroem o projeto open source (sistema de inscrição e check-in).
+const MATERIA_PROJETO = "Projeto open source: check-in";
+const MATERIA_CONTRIB = "Contribuir em outros projetos";
+const MATERIAS_ANTIGAS = { "Trilha back-end": MATERIA_PROJETO, "Open source": MATERIA_CONTRIB };
+
 function seedTarefas(doneMap = {}) {
   let ordem = 0;
   return TRILHA.flatMap((fase) =>
@@ -44,7 +49,7 @@ function seedTarefas(doneMap = {}) {
       id: uid(),
       titulo,
       descricao: `${fase.titulo} · ${fase.semanas}`,
-      materia: fase.id === "fp" ? "Open source" : "Trilha back-end",
+      materia: fase.id === "fp" ? MATERIA_CONTRIB : MATERIA_PROJETO,
       data: null,
       prioridade: "media",
       concluida: Boolean(doneMap[id]),
@@ -57,7 +62,11 @@ function seedTarefas(doneMap = {}) {
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return { ...emptyState(), ...JSON.parse(raw) };
+    if (raw) {
+      const s = { ...emptyState(), ...JSON.parse(raw) };
+      s.tarefas.forEach((t) => (t.materia = MATERIAS_ANTIGAS[t.materia] || t.materia));
+      return s;
+    }
     // Primeira vez: migra o progresso do app antigo, se houver.
     const s = emptyState();
     const old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
@@ -127,15 +136,15 @@ function toast(msg) {
 }
 
 // ---------- Componentes ----------
-function taskRow(t) {
+function taskRow(t, semMateria = false) {
   const meta = [];
-  if (t.materia) meta.push(h("b", {}, t.materia));
+  if (t.materia && semMateria !== true) meta.push(h("b", {}, t.materia));
   if (t.data) {
     const k = t.data;
-    const txt = k === hoje() ? "hoje" : k < hoje() && !t.concluida ? `desde ${fmtCurto(k)}` : fmtCurto(k);
-    meta.push(` · ${txt}`);
+    meta.push(k === hoje() ? "hoje" : k < hoje() && !t.concluida ? `desde ${fmtCurto(k)}` : fmtCurto(k));
   }
-  meta.push(` · ${PRIO_NOME[t.prioridade]}`);
+  meta.push(PRIO_NOME[t.prioridade]);
+  for (let i = meta.length - 1; i > 0; i--) meta.splice(i, 0, " · ");
   const cb = h("input", {
     type: "checkbox",
     class: "check",
@@ -277,8 +286,10 @@ function renderEstudos() {
     if (!grupos.has(g)) grupos.set(g, []);
     grupos.get(g).push(t);
   });
-  const nomes = [...grupos.keys()].sort((a, b) => (a === "Sem matéria") - (b === "Sem matéria") || a.localeCompare(b, "pt-BR"));
-  wrap.replaceChildren(...nomes.flatMap((g) => [h("h3", { class: "group-title" }, `${g} · ${grupos.get(g).length}`), h("ul", { class: "tasks" }, grupos.get(g).map(taskRow))]));
+  // Projeto principal primeiro; contribuições e "Sem matéria" por último.
+  const peso = (g) => (g === MATERIA_PROJETO ? 0 : g === MATERIA_CONTRIB ? 2 : g === "Sem matéria" ? 3 : 1);
+  const nomes = [...grupos.keys()].sort((a, b) => peso(a) - peso(b) || a.localeCompare(b, "pt-BR"));
+  wrap.replaceChildren(...nomes.flatMap((g) => [h("h3", { class: "group-title" }, `${g} · ${grupos.get(g).length}`), h("ul", { class: "tasks" }, grupos.get(g).map((t) => taskRow(t, true)))]));
 }
 
 function toggleTarefa(id) {
@@ -501,7 +512,7 @@ $("aj-nome").addEventListener("change", () => {
 
 $("btn-export").onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-  const a = h("a", { href: URL.createObjectURL(blob), download: `shema-backup-${hoje()}.json` });
+  const a = h("a", { href: URL.createObjectURL(blob), download: `study-to-do-backup-${hoje()}.json` });
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 };
@@ -567,7 +578,7 @@ $("btn-push").onclick = async () => {
 $("btn-test").onclick = async () => {
   if (!swReg) return toast("Ainda carregando. Tente de novo.");
   if ((await Notification.requestPermission()) !== "granted") return toast("Sem permissão para notificar.");
-  swReg.showNotification("SHEMA", { body: "Assim o convite das 19h vai aparecer.", icon: "icons/icon-192.png", badge: "icons/badge-96.png" });
+  swReg.showNotification("study-to-do", { body: "Assim o convite das 19h vai aparecer.", icon: "icons/icon-192.png", badge: "icons/badge-96.png" });
 };
 $("btn-copy").onclick = async () => {
   try {
@@ -579,7 +590,7 @@ $("btn-copy").onclick = async () => {
   }
 };
 $("btn-share").onclick = () => {
-  if (navigator.share) navigator.share({ title: "SHEMA", text: $("sub-json").value }).catch(() => {});
+  if (navigator.share) navigator.share({ title: "study-to-do", text: $("sub-json").value }).catch(() => {});
   else toast("Compartilhar não está disponível aqui.");
 };
 
