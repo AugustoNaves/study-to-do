@@ -1,5 +1,5 @@
 // Service worker: deixa o app funcionar offline e mostra o lembrete diário.
-const CACHE = "study-to-do-v3";
+const CACHE = "study-to-do-v4";
 const FILES = [
   "./",
   "index.html",

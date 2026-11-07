@@ -1,4 +1,4 @@
-// SHEMA — Estudos com Propósito
+// study-to-do · Estudos com propósito
 // Conteúdo devocional (14 devocionais + 31 versículos do dia).
 //
 // Texto bíblico: Bíblia Livre (BLIVRE), Copyright © 2018 Diego Santos, Mario Sérgio

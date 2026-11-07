@@ -1,7 +1,8 @@
 // study-to-do · Estudos com propósito
 // Tudo fica salvo no localStorage deste aparelho.
 const VAPID_PUBLIC_KEY = "BCj7dwNnOnRW_q5Q91-ragvpS4uIi8HjDk0v1EWZtHLKcfLlLMJaPA5qO3dEt-_4lT0nH-v_5eZSl_rLJn95TR0";
-const STORE_KEY = "shema:v1";
+const STORE_KEY = "study-to-do:v2";
+const PREV_KEY = "shema:v1"; // nome usado por pouco tempo; migrado automaticamente
 const OLD_KEY = "study-to-do:v1";
 const PRIO_ORDEM = { alta: 0, media: 1, baixa: 2 };
 const PRIO_NOME = { alta: "prioridade alta", media: "prioridade média", baixa: "prioridade baixa" };
@@ -61,7 +62,7 @@ function seedTarefas(doneMap = {}) {
 
 function load() {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
+    const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem(PREV_KEY);
     if (raw) {
       const s = { ...emptyState(), ...JSON.parse(raw) };
       s.tarefas.forEach((t) => (t.materia = MATERIAS_ANTIGAS[t.materia] || t.materia));
@@ -82,6 +83,7 @@ function load() {
 function save() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    localStorage.removeItem(PREV_KEY);
   } catch {
     toast("Não consegui salvar neste aparelho.");
   }
