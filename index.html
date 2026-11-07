@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>study-to-do</title>
+  <meta name="description" content="Trilha de estudos com lembrete diário: pelo menos uma coisinha por dia.">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>study-to-do</h1>
+    <p class="sub">Pelo menos uma coisinha por dia.</p>
+  </header>
+
+  <main>
+    <!-- HOJE -->
+    <section id="tab-hoje" class="tab" aria-labelledby="nav-hoje">
+      <div class="card streak-card">
+        <div class="streak">
+          <span id="streak-num" class="streak-num">0</span>
+          <span class="streak-label">dias seguidos</span>
+        </div>
+        <p id="today-status" class="muted"></p>
+        <label class="field">
+          <span>O que você fez hoje? (opcional)</span>
+          <input id="today-note" type="text" maxlength="140" placeholder="Ex.: li sobre status 409">
+        </label>
+        <button id="btn-today" class="btn primary">Fiz minha coisinha hoje</button>
+      </div>
+
+      <div class="card">
+        <h2>Próxima coisinha</h2>
+        <div id="next-task"></div>
+      </div>
+
+      <div class="card">
+        <h2>Últimas 12 semanas</h2>
+        <div id="heatmap" class="heatmap" role="img" aria-label="Dias estudados nas últimas 12 semanas"></div>
+        <p id="stats" class="muted small"></p>
+      </div>
+
+      <div class="card">
+        <h2>Repertório</h2>
+        <p class="muted small">Meta: 1 post de engenharia por semana (iFood, Nubank, Discord, Cloudflare...).</p>
+        <div class="counter">
+          <button id="posts-minus" class="btn ghost" aria-label="Diminuir posts lidos">−</button>
+          <span><strong id="posts-num">0</strong> posts lidos</span>
+          <button id="posts-plus" class="btn ghost" aria-label="Aumentar posts lidos">+1</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRILHA -->
+    <section id="tab-trilha" class="tab" hidden aria-labelledby="nav-trilha">
+      <div class="card">
+        <div class="progress-head">
+          <h2>Progresso geral</h2>
+          <span id="overall-pct" class="pct">0%</span>
+        </div>
+        <div class="bar"><div id="overall-bar" class="bar-fill"></div></div>
+      </div>
+      <div id="phases"></div>
+    </section>
+
+    <!-- AJUSTES -->
+    <section id="tab-ajustes" class="tab" hidden aria-labelledby="nav-ajustes">
+      <div class="card">
+        <h2>Lembrete diário (19h)</h2>
+        <p class="muted small">Todo dia às 19h o GitHub envia uma notificação para este celular. Instale o app na tela inicial antes de ativar.</p>
+        <p id="push-status" class="small"></p>
+        <div class="row">
+          <button id="btn-push" class="btn primary">Ativar lembrete</button>
+          <button id="btn-test" class="btn ghost">Testar aviso</button>
+        </div>
+        <div id="sub-box" hidden>
+          <p class="small">Copie o código abaixo e mande para o Claude configurar o envio diário:</p>
+          <textarea id="sub-json" rows="5" readonly></textarea>
+          <div class="row">
+            <button id="btn-copy" class="btn">Copiar</button>
+            <button id="btn-share" class="btn ghost">Compartilhar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Backup</h2>
+        <p class="muted small">Seu progresso fica salvo só neste aparelho. Exporte de vez em quando.</p>
+        <div class="row">
+          <button id="btn-export" class="btn">Exportar</button>
+          <label class="btn ghost file-btn">Importar<input id="file-import" type="file" accept="application/json" hidden></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Regras do modo professor</h2>
+        <ol class="rules">
+          <li>Você escreve o código. Pode pesquisar e perguntar conceitos.</li>
+          <li>A IA revisa, explica e não reescreve por você.</li>
+          <li>Travou 30 min? Peça uma dica, não a solução.</li>
+          <li>Feche cada fase explicando com suas palavras.</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Seções">
+    <button id="nav-hoje" data-tab="hoje" class="nav-btn active" aria-current="page">Hoje</button>
+    <button id="nav-trilha" data-tab="trilha" class="nav-btn">Trilha</button>
+    <button id="nav-ajustes" data-tab="ajustes" class="nav-btn">Ajustes</button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="trilha.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
