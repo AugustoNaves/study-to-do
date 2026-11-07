@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SHEMA · Protótipo</title>
+<meta name="theme-color" content="#F5F0E6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter:wght@400;500;600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --perg: #F5F0E6;
+  --oliva: #788568;
+  --oliva-txt: #5E6A50;
+  --profundo: #343B32;
+  --dourado: #B58B58;
+  --dourado-txt: #8A6534;
+  --branco: #FFFFFF;
+  --linha: #E4DCCB;
+  --suave: #ECE5D6;
+  --muted: #5F6559;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--perg);
+  color: var(--profundo);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+}
+button { font: inherit; color: inherit; }
+.wrap { max-width: 480px; margin: 0 auto; padding: 0 20px; }
+
+/* Seletor de direção (só no protótipo) */
+.switch {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--profundo); color: var(--perg);
+  font: 500 13px/1 Inter, system-ui, sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 12px calc(8px);
+  padding-top: calc(8px + env(safe-area-inset-top));
+}
+.switch span { opacity: .75; margin-right: 4px; }
+.switch button {
+  background: transparent; border: 1px solid rgba(245,240,230,.35); color: var(--perg);
+  border-radius: 99px; padding: 7px 14px; cursor: pointer; font-weight: 600;
+}
+.switch button[aria-pressed="true"] { background: var(--perg); color: var(--profundo); border-color: var(--perg); }
+
+/* Ícones */
+.ico { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Navegação inferior (comum às duas) */
+.nav {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: flex; justify-content: space-around;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: var(--perg); border-top: 1px solid var(--linha);
+}
+.nav button {
+  flex: 1; max-width: 110px; background: none; border: 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 6px 0; font-size: 12px; color: var(--muted);
+}
+.nav button.on { color: var(--profundo); font-weight: 600; }
+
+/* ================= DIREÇÃO A · CADERNO ================= */
+.dir-a { font: 400 16px/1.5 Inter, system-ui, sans-serif; }
+.dir-a .top { display: flex; justify-content: space-between; align-items: flex-start; padding: 28px 0 8px; }
+.dir-a .date { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--oliva-txt); margin: 0 0 6px; }
+.dir-a h1 { font: 400 34px/1.1 Newsreader, Georgia, serif; margin: 0; letter-spacing: -.01em; }
+.dir-a .gear { background: none; border: 0; padding: 6px; color: var(--oliva-txt); cursor: pointer; }
+.dir-a .rule { border: 0; height: 1px; background: var(--dourado); opacity: .55; margin: 28px 0; }
+.dir-a .verse { text-align: center; padding: 4px 8px; }
+.dir-a .verse .label { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--dourado-txt); margin: 0 0 14px; }
+.dir-a .verse blockquote { font: italic 400 23px/1.4 Newsreader, Georgia, serif; margin: 0; }
+.dir-a .verse cite { display: block; font: 500 13px/1 Inter, sans-serif; font-style: normal; letter-spacing: .06em; color: var(--dourado-txt); margin-top: 14px; }
+.dir-a h2 { font: 500 21px/1.2 Newsreader, Georgia, serif; margin: 0 0 4px; }
+.dir-a .hint { font-size: 14px; color: var(--muted); margin: 0 0 16px; }
+.dir-a .journey { list-style: none; margin: 0; padding: 0; position: relative; }
+.dir-a .journey::before { content: ""; position: absolute; left: 15px; top: 20px; bottom: 20px; width: 1px; background: var(--linha); }
+.dir-a .step { display: flex; gap: 14px; align-items: center; width: 100%; text-align: left; background: none; border: 0; padding: 10px 0; cursor: pointer; position: relative; }
+.dir-a .step .mark { width: 31px; height: 31px; border-radius: 50%; border: 1px solid var(--oliva); background: var(--perg); display: grid; place-items: center; font: 500 15px/1 Newsreader, serif; color: var(--oliva-txt); flex-shrink: 0; transition: all .2s; }
+.dir-a .step.done .mark { background: var(--oliva); color: var(--branco); border-color: var(--oliva); }
+.dir-a .step .t { font-weight: 500; display: block; }
+.dir-a .step .s { font-size: 14px; color: var(--muted); }
+.dir-a .step.done .t { color: var(--oliva-txt); }
+.dir-a .step .go { margin-left: auto; color: var(--dourado); }
+.dir-a .sec-head { display: flex; justify-content: space-between; align-items: baseline; }
+.dir-a .link { font-size: 14px; color: var(--oliva-txt); font-weight: 500; text-decoration: none; }
+.dir-a .progress-line { font-size: 14px; color: var(--muted); margin: 0 0 12px; }
+.dir-a .bar { height: 3px; background: var(--suave); border-radius: 3px; margin-bottom: 8px; overflow: hidden; }
+.dir-a .bar i { display: block; height: 100%; background: var(--oliva); transition: width .3s; }
+.dir-a .tasks { list-style: none; margin: 0; padding: 0; }
+.dir-a .task { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid var(--linha); cursor: pointer; }
+.dir-a .task:last-child { border-bottom: 0; }
+.dir-a .box { width: 22px; height: 22px; border: 1.5px solid var(--oliva); border-radius: 6px; flex-shrink: 0; margin-top: 1px; display: grid; place-items: center; transition: all .2s; }
+.dir-a .task.done .box { background: var(--oliva); }
+.dir-a .task.done .box::after { content: ""; width: 10px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px,-1px); }
+.dir-a .task.done .tt { text-decoration: line-through; color: var(--muted); }
+.dir-a .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.dir-a .meta b { font-weight: 500; color: var(--oliva-txt); }
+.dir-a .upcoming { list-style: none; margin: 0; padding: 0; }
+.dir-a .upcoming li { display: flex; gap: 16px; padding: 10px 0; align-items: baseline; }
+.dir-a .day { font: 400 26px/1 Newsreader, serif; color: var(--dourado-txt); min-width: 34px; text-align: center; }
+.dir-a .day small { display: block; font: 500 11px/1.4 Inter, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.dir-a .card-b { display: none; }
+
+/* ================= DIREÇÃO B · JARDIM ================= */
+.dir-b { font: 400 16px/1.5 Nunito, system-ui, sans-serif; }
+.dir-b .top { display: flex; justify-content: space-between; align-items: center; padding: 22px 0 16px; }
+.dir-b .date { font-size: 14px; color: var(--oliva-txt); margin: 0 0 2px; font-weight: 600; }
+.dir-b h1 { font: 800 26px/1.15 Nunito, sans-serif; margin: 0; }
+.dir-b .gear { background: var(--suave); border: 0; padding: 10px; border-radius: 14px; color: var(--profundo); cursor: pointer; }
+.dir-b .rule { display: none; }
+.dir-b .verse { background: var(--profundo); color: var(--perg); border-radius: 24px; padding: 22px; margin: 4px 0 18px; }
+.dir-b .verse .label { font-size: 13px; font-weight: 700; color: #D9BF95; margin: 0 0 10px; }
+.dir-b .verse blockquote { font: 600 19px/1.45 Nunito, sans-serif; margin: 0; }
+.dir-b .verse cite { display: block; font-style: normal; font-size: 14px; font-weight: 700; color: #D9BF95; margin-top: 12px; }
+.dir-b section.block { background: var(--branco); border-radius: 24px; padding: 20px; margin-bottom: 14px; }
+.dir-b h2 { font: 800 18px/1.2 Nunito, sans-serif; margin: 0 0 2px; }
+.dir-b .hint { font-size: 14px; color: var(--muted); margin: 0 0 14px; }
+.dir-b .journey { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dir-b .step { background: var(--perg); border: 0; border-radius: 18px; padding: 14px 8px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; cursor: pointer; width: 100%; height: 100%; transition: all .2s; }
+.dir-b .step .mark { width: 36px; height: 36px; border-radius: 12px; background: var(--suave); display: grid; place-items: center; font-weight: 800; color: var(--oliva-txt); }
+.dir-b .step .t { font-weight: 700; font-size: 13px; line-height: 1.25; }
+.dir-b .step .s, .dir-b .step .go { display: none; }
+.dir-b .step.done { background: var(--oliva); color: var(--branco); }
+.dir-b .step.done .mark { background: rgba(255,255,255,.22); color: var(--branco); }
+.dir-b .sec-head { display: flex; justify-content: space-between; align-items: baseline; }
+.dir-b .link { font-size: 14px; color: var(--oliva-txt); font-weight: 700; text-decoration: none; }
+.dir-b .progress-line { font-size: 14px; color: var(--muted); margin: 0 0 8px; }
+.dir-b .bar { height: 10px; background: var(--suave); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+.dir-b .bar i { display: block; height: 100%; background: var(--oliva); border-radius: 10px; transition: width .3s; }
+.dir-b .tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dir-b .task { display: flex; gap: 12px; align-items: center; padding: 12px; background: var(--perg); border-radius: 16px; cursor: pointer; }
+.dir-b .box { width: 26px; height: 26px; border-radius: 9px; background: var(--branco); border: 2px solid var(--oliva); flex-shrink: 0; display: grid; place-items: center; }
+.dir-b .task.done .box { background: var(--oliva); }
+.dir-b .task.done .box::after { content: ""; width: 11px; height: 6px; border: 2.5px solid #fff; border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px,-1px); }
+.dir-b .task.done .tt { text-decoration: line-through; color: var(--muted); }
+.dir-b .tt { font-weight: 700; }
+.dir-b .meta { font-size: 13px; color: var(--muted); }
+.dir-b .meta b { color: var(--oliva-txt); }
+.dir-b .upcoming { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dir-b .upcoming li { display: flex; gap: 12px; align-items: center; }
+.dir-b .day { background: #EFE4D2; color: var(--dourado-txt); border-radius: 14px; width: 52px; height: 52px; display: grid; place-items: center; text-align: center; font: 800 20px/1 Nunito, sans-serif; flex-shrink: 0; }
+.dir-b .day small { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+.dir-b .nav { background: var(--branco); border-top: 0; box-shadow: 0 -4px 20px rgba(52,59,50,.06); }
+.dir-b .nav button.on { color: var(--oliva-txt); }
+.dir-b .nav button.on .ico { background: var(--suave); border-radius: 10px; padding: 2px; width: 34px; }
+
+.prio { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--dourado); margin: 0 4px 1px 0; vertical-align: middle; }
+.prio.baixa { background: transparent; border: 1px solid var(--oliva); }
+:focus-visible { outline: 2px solid var(--dourado-txt); outline-offset: 2px; border-radius: 6px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body class="dir-a">
+  <div class="switch" role="group" aria-label="Direção visual">
+    <span>Protótipo ·</span>
+    <button data-dir="a" aria-pressed="true">A · Caderno</button>
+    <button data-dir="b" aria-pressed="false">B · Jardim</button>
+  </div>
+
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <p class="date" id="date"></p>
+        <h1 id="greet">Boa tarde, Augusto</h1>
+      </div>
+      <button class="gear" aria-label="Ajustes">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </header>
+
+    <section class="verse" aria-label="Versículo do dia">
+      <p class="label">Versículo do dia</p>
+      <blockquote>“Porque o Senhor dá a sabedoria; da sua boca vem o conhecimento e o entendimento.”</blockquote>
+      <cite>Provérbios 2:6</cite>
+    </section>
+
+    <hr class="rule">
+
+    <section class="block" aria-labelledby="j-title">
+      <h2 id="j-title">Jornada de hoje</h2>
+      <p class="hint" id="j-hint">Um passo de cada vez. Nenhum é obrigatório.</p>
+      <ol class="journey">
+        <li><button class="step done" aria-pressed="true"><span class="mark">1</span><span><span class="t">Preparar o coração</span><span class="s">Devocional · 5 min</span></span><svg class="ico go" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></li>
+        <li><button class="step" aria-pressed="false"><span class="mark">2</span><span><span class="t">Estudar com propósito</span><span class="s">3 tarefas para hoje</span></span><svg class="ico go" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></li>
+        <li><button class="step" aria-pressed="false"><span class="mark">3</span><span><span class="t">Refletir e agradecer</span><span class="s">Devocional · 5 min</span></span><svg class="ico go" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button></li>
+      </ol>
+    </section>
+
+    <hr class="rule">
+
+    <section class="block" aria-labelledby="t-title">
+      <div class="sec-head">
+        <h2 id="t-title">Para hoje</h2>
+        <a class="link" href="#">Ver todas</a>
+      </div>
+      <p class="progress-line" id="t-prog"></p>
+      <div class="bar"><i id="t-bar"></i></div>
+      <ul class="tasks">
+        <li class="task done" role="checkbox" aria-checked="true" tabindex="0"><span class="box"></span><div><div class="tt">Criar projeto Node + TypeScript</div><div class="meta"><span class="prio"></span><b>Trilha back-end</b> · prioridade média</div></div></li>
+        <li class="task" role="checkbox" aria-checked="false" tabindex="0"><span class="box"></span><div><div class="tt">Subir a rota GET /health</div><div class="meta"><span class="prio"></span><b>Trilha back-end</b> · prioridade alta</div></div></li>
+        <li class="task" role="checkbox" aria-checked="false" tabindex="0"><span class="box"></span><div><div class="tt">Revisar anotações de Cálculo</div><div class="meta"><span class="prio baixa"></span><b>Faculdade</b> · prioridade baixa</div></div></li>
+      </ul>
+    </section>
+
+    <hr class="rule">
+
+    <section class="block" aria-labelledby="u-title">
+      <h2 id="u-title">Próximos estudos</h2>
+      <p class="hint">Programados para esta semana.</p>
+      <ul class="upcoming">
+        <li><span class="day">9<small>seg</small></span><div><div class="tt">Status codes: 400, 404, 409, 422</div><div class="meta"><b>Trilha back-end</b></div></div></li>
+        <li><span class="day">11<small>qua</small></span><div><div class="tt">Lista de exercícios 3</div><div class="meta"><b>Faculdade</b></div></div></li>
+      </ul>
+    </section>
+  </main>
+
+  <nav class="nav" aria-label="Navegação principal">
+    <button class="on" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Início</button>
+    <button><svg class="ico" viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h14v15H6a2 2 0 0 0-2 2 2 2 0 0 0 2 2h14"/><path d="M9 8h7M9 12h5"/></svg>Estudos</button>
+    <button><svg class="ico" viewBox="0 0 24 24"><path d="M12 6c-2-1.5-5-2-8-1.5V19c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5C17 4 14 4.5 12 6z"/><path d="M12 6v14.5"/></svg>Devocionais</button>
+    <button><svg class="ico" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M7 16v-4M12 16V8M17 16v-6"/></svg>Progresso</button>
+  </nav>
+
+<script>
+// Data e saudação
+const now = new Date();
+const h = now.getHours();
+document.getElementById("greet").textContent = (h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite") + ", Augusto";
+document.getElementById("date").textContent = now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+
+// Troca de direção
+document.querySelectorAll(".switch button").forEach((b) => {
+  b.onclick = () => {
+    document.body.className = "dir-" + b.dataset.dir;
+    document.querySelectorAll(".switch button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    document.querySelector('meta[name="theme-color"]').content = b.dataset.dir === "a" ? "#F5F0E6" : "#343B32";
+  };
+});
+
+// Jornada
+const hints = ["Um passo de cada vez. Nenhum é obrigatório.", "Que bom que você começou.", "Você já caminhou bastante hoje.", "Dia completo. Obrigado por cuidar disso."];
+function updJourney() {
+  const n = document.querySelectorAll(".step.done").length;
+  document.getElementById("j-hint").textContent = hints[n];
+}
+document.querySelectorAll(".step").forEach((s) => {
+  s.onclick = () => { s.classList.toggle("done"); s.setAttribute("aria-pressed", s.classList.contains("done")); updJourney(); };
+});
+
+// Tarefas
+function updTasks() {
+  const all = document.querySelectorAll(".task");
+  const done = document.querySelectorAll(".task.done").length;
+  document.getElementById("t-prog").textContent = done === all.length
+    ? "Tudo feito por hoje."
+    : `${done} de ${all.length} concluídas`;
+  document.getElementById("t-bar").style.width = (done / all.length) * 100 + "%";
+}
+document.querySelectorAll(".task").forEach((t) => {
+  const toggle = () => { t.classList.toggle("done"); t.setAttribute("aria-checked", t.classList.contains("done")); updTasks(); };
+  t.onclick = toggle;
+  t.onkeydown = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); } };
+});
+updJourney(); updTasks();
+</script>
+</body>
+</html>
