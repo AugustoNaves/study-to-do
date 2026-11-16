@@ -232,3 +232,10 @@ input:focus, textarea:focus { outline: none; border-color: var(--oliva); }
 @keyframes up { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 360px) { .field-row { grid-template-columns: 1fr; } h1 { font-size: 30px; } }
+
+/* Guia das tarefas da trilha (por quê, como começar, pronto quando, termo novo) */
+.guia { margin: 0 0 20px; padding: 14px 16px; background: var(--papel); border: 1px solid var(--linha); border-radius: 14px; }
+.guia > div + div { margin-top: 12px; }
+.guia dt { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--dourado-txt); margin-bottom: 2px; }
+.guia dd { margin: 0; font-size: 15px; line-height: 1.5; color: var(--profundo); }
+.mostrar-fases { display: block; width: 100%; margin: 8px 0 96px; }

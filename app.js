@@ -41,9 +41,30 @@ function emptyState() {
 // As tarefas da trilha (trilha.js) entram no estado e são sincronizadas quando
 // TRILHA_VERSAO sobe: tarefas novas aparecem, fase e ordem se atualizam,
 // e o que você já concluiu (ou excluiu de propósito) é respeitado.
-const TRILHA_VERSAO = 2;
+const TRILHA_VERSAO = 3;
 const MATERIAS_ANTIGAS = { "Trilha back-end": MATERIAS.projeto, "Open source": MATERIAS.contrib };
 const ORDEM_MATERIAS = [...new Set(TRILHA.map((f) => f.materia))];
+// trilhaId → posição da fase e guia (por quê, como começar, pronto quando, termo novo).
+const INFO_TRILHA = new Map();
+TRILHA.forEach((fase, i) => fase.tarefas.forEach(([id, , guia]) => INFO_TRILHA.set(id, { fase: i, guia })));
+const IDX_PARALELO = TRILHA.findIndex((f) => f.id === "fp");
+const IDX_MES_2 = TRILHA.findIndex((f) => f.id === "p1"); // "Em paralelo" começa no mês 2
+
+// Fase atual = a primeira com tarefa pendente. As seguintes ficam escondidas
+// em Estudos para a lista não pesar (dá para mostrar tudo).
+function faseAtual() {
+  const fases = state.tarefas
+    .filter((t) => !t.concluida && t.trilhaId && INFO_TRILHA.has(t.trilhaId))
+    .map((t) => INFO_TRILHA.get(t.trilhaId).fase)
+    .filter((i) => i !== IDX_PARALELO);
+  return fases.length ? Math.min(...fases) : Infinity;
+}
+function naFaseAtual(t, atual) {
+  const info = t.trilhaId && INFO_TRILHA.get(t.trilhaId);
+  if (!info) return true;
+  if (info.fase === IDX_PARALELO) return atual >= IDX_MES_2;
+  return info.fase <= atual;
+}
 
 function sincronizarTrilha(s, doneMap = {}) {
   s.trilhaOcultas = s.trilhaOcultas || [];
@@ -278,10 +299,14 @@ function renderInicio() {
 
 // ---------- ESTUDOS ----------
 let filtro = "pendentes";
+let mostrarTudo = false;
 function renderEstudos() {
-  const pend = state.tarefas.filter((t) => !t.concluida);
+  const todasPend = state.tarefas.filter((t) => !t.concluida);
+  const atual = faseAtual();
+  const pend = mostrarTudo ? todasPend : todasPend.filter((t) => naFaseAtual(t, atual));
+  const escondidas = todasPend.length - todasPend.filter((t) => naFaseAtual(t, atual)).length;
   const done = state.tarefas.filter((t) => t.concluida);
-  $("count-pend").textContent = `(${pend.length})`;
+  $("count-pend").textContent = `(${todasPend.length})`;
   $("count-done").textContent = `(${done.length})`;
   document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.filter === filtro)));
 
@@ -303,7 +328,11 @@ function renderEstudos() {
   // Matérias da trilha na ordem do plano; as suas depois; "Sem matéria" por último.
   const peso = (g) => (g === "Sem matéria" ? 1e9 : ORDEM_MATERIAS.includes(g) ? ORDEM_MATERIAS.indexOf(g) : ORDEM_MATERIAS.length);
   const nomes = [...grupos.keys()].sort((a, b) => peso(a) - peso(b) || a.localeCompare(b, "pt-BR"));
-  wrap.replaceChildren(...nomes.flatMap((g) => [h("h3", { class: "group-title" }, `${g} · ${grupos.get(g).length}`), h("ul", { class: "tasks" }, grupos.get(g).map((t) => taskRow(t, true)))]));
+  const alternar = escondidas
+    ? h("button", { class: "btn ghost mostrar-fases", type: "button", onclick: () => { mostrarTudo = !mostrarTudo; renderEstudos(); } },
+        mostrarTudo ? "Mostrar só a fase atual" : `Ver as próximas fases (${escondidas} tarefas)`)
+    : null;
+  wrap.replaceChildren(...nomes.flatMap((g) => [h("h3", { class: "group-title" }, `${g} · ${grupos.get(g).length}`), h("ul", { class: "tasks" }, grupos.get(g).map((t) => taskRow(t, true)))]), alternar || "");
 }
 
 function toggleTarefa(id) {
@@ -323,6 +352,11 @@ function abrirTarefa(t = null) {
   $("ts-title").textContent = t ? "Editar tarefa" : "Nova tarefa";
   $("tf-titulo").value = t?.titulo || "";
   $("tf-desc").value = t?.descricao || "";
+  const guia = t?.trilhaId && INFO_TRILHA.get(t.trilhaId)?.guia;
+  const partes = [["Por quê", "porque"], ["Como começar", "comecar"], ["Pronto quando", "pronto"], ["Termo novo", "termo"]];
+  $("tf-guia").hidden = !guia;
+  if (guia) $("ts-title").textContent = t.titulo;
+  $("tf-guia").replaceChildren(...(guia ? partes.filter(([, k]) => guia[k]).map(([rotulo, k]) => h("div", {}, h("dt", {}, rotulo), h("dd", {}, guia[k]))) : []));
   $("tf-materia").value = t?.materia || "";
   $("tf-data").value = t?.data || "";
   document.querySelector(`input[name="prio"][value="${t?.prioridade || "media"}"]`).checked = true;
