@@ -38,26 +38,41 @@ function emptyState() {
   return { nome: "", tarefas: [], devoc: {}, diasLegado: [], push: false };
 }
 
-// As tarefas da trilha constroem o projeto open source (sistema de inscrição e check-in).
-const MATERIA_PROJETO = "Projeto open source: check-in";
-const MATERIA_CONTRIB = "Contribuir em outros projetos";
-const MATERIAS_ANTIGAS = { "Trilha back-end": MATERIA_PROJETO, "Open source": MATERIA_CONTRIB };
+// As tarefas da trilha (trilha.js) entram no estado e são sincronizadas quando
+// TRILHA_VERSAO sobe: tarefas novas aparecem, fase e ordem se atualizam,
+// e o que você já concluiu (ou excluiu de propósito) é respeitado.
+const TRILHA_VERSAO = 2;
+const MATERIAS_ANTIGAS = { "Trilha back-end": MATERIAS.projeto, "Open source": MATERIAS.contrib };
+const ORDEM_MATERIAS = [...new Set(TRILHA.map((f) => f.materia))];
 
-function seedTarefas(doneMap = {}) {
+function sincronizarTrilha(s, doneMap = {}) {
+  s.trilhaOcultas = s.trilhaOcultas || [];
+  const materiasTrilha = new Set(Object.values(MATERIAS));
+  const porId = new Map(s.tarefas.filter((t) => t.trilhaId).map((t) => [t.trilhaId, t]));
+  // Tarefas da versão 1 não tinham trilhaId: são reconhecidas pelo título,
+  // preferindo a mesma fase ("Mandar o código para revisão" se repete).
+  const antigas = s.tarefas.filter((t) => !t.trilhaId && materiasTrilha.has(t.materia));
+  const acharAntiga = (titulo, fase) => {
+    const iguais = antigas.filter((t) => t.titulo === titulo);
+    const t = iguais.find((x) => (x.descricao || "").startsWith(`${fase} ·`)) || iguais[0];
+    if (t) antigas.splice(antigas.indexOf(t), 1);
+    return t;
+  };
   let ordem = 0;
-  return TRILHA.flatMap((fase) =>
-    fase.tarefas.map(([id, titulo]) => ({
-      id: uid(),
-      titulo,
-      descricao: `${fase.titulo} · ${fase.semanas}`,
-      materia: fase.id === "fp" ? MATERIA_CONTRIB : MATERIA_PROJETO,
-      data: null,
-      prioridade: "media",
-      concluida: Boolean(doneMap[id]),
-      concluidaEm: doneMap[id] || null,
-      ordem: ordem++,
-    }))
-  );
+  for (const fase of TRILHA) {
+    for (const [id, titulo] of fase.tarefas) {
+      const pos = ordem++;
+      if (s.trilhaOcultas.includes(id)) continue;
+      let t = porId.get(id) || acharAntiga(titulo, fase.titulo);
+      if (!t) {
+        t = { id: uid(), data: null, prioridade: fase.prioridade || "media", concluida: Boolean(doneMap[id]), concluidaEm: doneMap[id] || null };
+        s.tarefas.push(t);
+      }
+      Object.assign(t, { trilhaId: id, titulo, descricao: `${fase.titulo} · ${fase.semanas}`, materia: fase.materia, ordem: pos });
+    }
+  }
+  s.trilhaVersao = TRILHA_VERSAO;
+  return s;
 }
 
 function load() {
@@ -66,18 +81,15 @@ function load() {
     if (raw) {
       const s = { ...emptyState(), ...JSON.parse(raw) };
       s.tarefas.forEach((t) => (t.materia = MATERIAS_ANTIGAS[t.materia] || t.materia));
-      return s;
+      return (s.trilhaVersao || 1) < TRILHA_VERSAO ? sincronizarTrilha(s) : s;
     }
     // Primeira vez: migra o progresso do app antigo, se houver.
     const s = emptyState();
     const old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
-    s.tarefas = seedTarefas(old?.done || {});
     s.diasLegado = old?.days ? Object.keys(old.days) : [];
-    return s;
+    return sincronizarTrilha(s, old?.done || {});
   } catch {
-    const s = emptyState();
-    s.tarefas = seedTarefas();
-    return s;
+    return sincronizarTrilha(emptyState());
   }
 }
 function save() {
@@ -288,8 +300,8 @@ function renderEstudos() {
     if (!grupos.has(g)) grupos.set(g, []);
     grupos.get(g).push(t);
   });
-  // Projeto principal primeiro; contribuições e "Sem matéria" por último.
-  const peso = (g) => (g === MATERIA_PROJETO ? 0 : g === MATERIA_CONTRIB ? 2 : g === "Sem matéria" ? 3 : 1);
+  // Matérias da trilha na ordem do plano; as suas depois; "Sem matéria" por último.
+  const peso = (g) => (g === "Sem matéria" ? 1e9 : ORDEM_MATERIAS.includes(g) ? ORDEM_MATERIAS.indexOf(g) : ORDEM_MATERIAS.length);
   const nomes = [...grupos.keys()].sort((a, b) => peso(a) - peso(b) || a.localeCompare(b, "pt-BR"));
   wrap.replaceChildren(...nomes.flatMap((g) => [h("h3", { class: "group-title" }, `${g} · ${grupos.get(g).length}`), h("ul", { class: "tasks" }, grupos.get(g).map((t) => taskRow(t, true)))]));
 }
@@ -347,6 +359,8 @@ $("tf-cancel").onclick = () => fecharOverlay();
 $("tf-delete").onclick = () => {
   if (!editando || !confirm(`Excluir “${editando.titulo}”? Isso não pode ser desfeito.`)) return;
   state.tarefas = state.tarefas.filter((t) => t !== editando);
+  // Tarefa da trilha excluída de propósito não volta na próxima atualização.
+  if (editando.trilhaId) state.trilhaOcultas = [...(state.trilhaOcultas || []), editando.trilhaId];
   save();
   fecharOverlay();
   renderAll();
@@ -525,6 +539,7 @@ $("file-import").onchange = async (e) => {
     const data = JSON.parse(await file.text());
     if (!Array.isArray(data.tarefas) || typeof data.devoc !== "object") throw new Error();
     state = { ...emptyState(), ...data };
+    if ((state.trilhaVersao || 1) < TRILHA_VERSAO) sincronizarTrilha(state);
     save();
     renderAll();
     toast("Backup importado.");

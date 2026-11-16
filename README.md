@@ -3,7 +3,7 @@
 PWA para organizar estudos e cultivar a fé: estudar com sabedoria, crescer em conhecimento e fortalecer a fé.
 
 - **Início:** versículo do dia, jornada de hoje (preparar o coração, estudar, refletir), tarefas do dia e próximos estudos
-- **Estudos:** tarefas com matéria, data e prioridade (já vem com as tarefas do projeto open source de inscrição e check-in, em 12 semanas)
+- **Estudos:** tarefas com matéria, data e prioridade (já vem com uma trilha de 6 meses em `trilha.js`: o projeto open source de inscrição e check-in, segurança e RLS do psico, concorrência no desafio Jungle, depuração, IA com eval e preparação para entrevistas; ao mudar a trilha, suba `TRILHA_VERSAO` em `app.js` e o progresso salvo é mantido)
 - **Devocionais:** 14 devocionais (7 para antes e 7 para depois de estudar) com anotações e oração
 - **Progresso:** semana, totais e histórico, sem cobrança por dias parados
 - Lembrete diário às 19h (horário de Brasília) via notificação push
